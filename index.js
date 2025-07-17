@@ -1,8 +1,8 @@
-//Imports:
+// Imports:
 import readline from "readline";
 import fs from "fs";
 
-//File Path Constant:
+// File Path Constant:
 const file_path = "./todos.json";
 
 // Setup CLI interface:
@@ -30,7 +30,7 @@ const askQuestion = (question) => {
   return new Promise((resolve) => rl.question(question, resolve));
 };
 
-//Helper Function To Save Todos In The File:
+// Helper Function To Save Todos In The File:
 const saveTodos = () => {
   try {
     fs.writeFileSync(file_path, JSON.stringify(todos, null, 2));
@@ -153,7 +153,7 @@ const handleInput = async (option) => {
   showMenu();
 };
 
-//Load the file:
+// Load the file:
 loadTodos();
 // Show the menu:
 showMenu();
