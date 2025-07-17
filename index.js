@@ -1,5 +1,9 @@
 //Imports:
 import readline from "readline";
+import fs from "fs";
+
+//File Path Constant:
+const file_path = "./todos.json";
 
 // Setup CLI interface:
 const rl = readline.createInterface({
@@ -8,11 +12,31 @@ const rl = readline.createInterface({
 });
 
 // Todo list:
-const todos = [];
+let todos = [];
+
+const loadTodos = () => {
+  try {
+    if (fs.existsSync(file_path)) {
+      const data = fs.readFileSync(file_path, "utf-8");
+      todos = JSON.parse(data);
+    }
+  } catch (error) {
+    console.error("Failed to load todos:", error);
+  }
+};
 
 // AskQuestion Function That Resolves Promises and Provides The Value From CLI:
 const askQuestion = (question) => {
   return new Promise((resolve) => rl.question(question, resolve));
+};
+
+//Helper Function To Save Todos In The File:
+const saveTodos = () => {
+  try {
+    fs.writeFileSync(file_path, JSON.stringify(todos, null, 2));
+  } catch (error) {
+    console.error("Failed to save todos:", error);
+  }
 };
 
 // Show menu options:
@@ -20,12 +44,12 @@ const showMenu = async () => {
   console.log(`
 X----------------------------------------------------------------------------------X
 
- | Please Enter the following keys for the functionality                          |
-
+ | Please Enter the following keys for the functionality                          |  
  | 1: View All Todos [Tasks]                                                      |
  | 2: Add A Todo [Task]                                                           |
- | 3: Update A Todo [Task]                                                        |
- | 4: Delete A Todo [Task]                                                        |
+ | 3: Mark A Todo As Complete [Task]                                              |
+ | 4: Update An Existing Todo [Task]                                              |
+ | 5: Delete A Todo [Task]                                                        |
  | 0: Exit The App                                                                |
 
 X----------------------------------------------------------------------------------X
@@ -39,66 +63,97 @@ X-------------------------------------------------------------------------------
 const handleInput = async (option) => {
   switch (option) {
     case 1:
-      console.log("\nYour Todo Lists:");
+      console.log("\nYour Todo List:");
       todos.forEach((todo, index) => {
-        console.log(`\n${index + 1}. ${JSON.stringify(todo)}`);
+        console.log(
+          `${index + 1}. [${todo.isCompleted ? "Completed" : "Pending"}] ${
+            todo.taskName
+          }`
+        );
       });
       break;
 
     case 2:
       const taskName = await askQuestion("Enter task name: ");
-      const description = await askQuestion("Enter task description: ");
-      const newTodo = {
+      todos.push({
         id: todos.length === 0 ? 1 : todos[todos.length - 1].id + 1,
         taskName,
-        description,
         isCompleted: false,
-      };
-      todos.push(newTodo);
-      console.log("\nTask Added Successfully!");
+      });
+      saveTodos();
+      console.log("Task added!");
       break;
 
     case 3:
-      const updateId = parseInt(await askQuestion("Enter task id to update: "));
-      const todoToUpdate = todos.find((t) => t.id === updateId);
-      if (!todoToUpdate) {
-        console.log("\nInvalid task id!");
-        break;
+      const updateIndex =
+        parseInt(
+          await askQuestion("Enter task number to mark as completed: ")
+        ) - 1;
+      if (todos[updateIndex]) {
+        todos[updateIndex].isCompleted = true;
+        saveTodos();
+        console.log("Task marked as completed!");
+      } else {
+        console.log("Invalid task number!");
       }
-      todoToUpdate.taskName = await askQuestion("Enter new task name: ");
-      todoToUpdate.description = await askQuestion("Enter new description: ");
-      const completed = await askQuestion("Is it completed? (yes/no): ");
-      todoToUpdate.isCompleted = completed.toLowerCase() === "yes";
-      console.log("\nTask Updated Successfully!");
       break;
 
     case 4:
-      const deleteId = parseInt(await askQuestion("Enter task id to delete: "));
-      const newTodos = todos.filter((t) => t.id !== deleteId);
+      const editIndex =
+        parseInt(await askQuestion("Enter task number to update: ")) - 1;
 
-      if (newTodos.length === todos.length) {
-        console.log("\nInvalid task id!");
-        break;
+      if (todos[editIndex]) {
+        const newName = await askQuestion(
+          `Enter new name (Leave blank to keep "${todos[editIndex].taskName}"): `
+        );
+        const completedStatus = await askQuestion(
+          "Mark as completed? (yes/no): "
+        );
+
+        // Only update name if not blank
+        if (newName.trim()) {
+          todos[editIndex].taskName = newName.trim();
+        }
+
+        // Toggle completion
+        if (completedStatus.toLowerCase() === "yes") {
+          todos[editIndex].isCompleted = true;
+        } else if (completedStatus.toLowerCase() === "no") {
+          todos[editIndex].isCompleted = false;
+        }
+
+        saveTodos();
+        console.log("Task updated!");
+      } else {
+        console.log("Invalid task number!");
       }
+      break;
 
-      todos.length = 0;
-      todos.push(...newTodos);
-
-      console.log("\nTask Deleted Successfully!");
+    case 5:
+      const deleteIndex =
+        parseInt(await askQuestion("Enter task number to delete: ")) - 1;
+      if (todos[deleteIndex]) {
+        todos.splice(deleteIndex, 1);
+        saveTodos();
+        console.log("Task deleted!");
+      } else {
+        console.log("Invalid task number!");
+      }
       break;
 
     case 0:
-      console.log("\nGood Bye! See You Again!");
+      console.log("\nGoodbye!");
       rl.close();
       return;
 
     default:
-      console.log("\nPlease provide a valid option!");
+      console.log("❗ Please enter a valid option.");
   }
 
-  // Show the menu to continue the program:
   showMenu();
 };
 
+//Load the file:
+loadTodos();
 // Show the menu:
 showMenu();
